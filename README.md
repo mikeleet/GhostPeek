@@ -17,7 +17,13 @@ Planned components
 Quickstart (future)
 - `curl -fsSL https://raw.githubusercontent.com/mikeleet/GhostPeek/main/scripts/install.sh | bash`
 - Script will: install deps, start bridge on LAN/VPN IP and port 8787, generate/persist token, open `/bootstrap` QR page.
- - You can also run manually: `npm install && npm run build && npm run start` (set HOST/PORT/TOKEN_FILE/etc.).
+- You can also run manually: `npm install && npm run build && npm run start` (set HOST/PORT/TOKEN_FILE/etc.).
+
+Local test on Mac (real PTY)
+- `scripts/run-local.sh` — installs deps, builds, and starts the bridge with real PTY (`MOCK_PTY=false` default). Override env as needed: `HOST=127.0.0.1 PORT=8787 USE_TMUX=true`.
+- Visit `http://<HOST>:<PORT>/bootstrap` to get the QR/JSON payload.
+- Create a session: `scripts/create-session.sh` (uses token from `~/.ghostpeek/token` by default). Capture the `id` from the JSON response.
+- Connect with a WS client (e.g., wscat): `wscat -c "ws://<HOST>:<PORT>/term?sessionId=<id>&token=$(cat ~/.ghostpeek/token)"` and type; output should echo from the shell.
 
 QA/testing
 - `npm install && npm test` — unit/integration for config, token persistence, auth guard, sessions, WS hello/echo (with mock PTY).

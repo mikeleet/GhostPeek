@@ -4,6 +4,7 @@ Local checks
 - npm install
 - npm test (vitest)
 - Optional: npm run dev and hit `/health` (requires node installed)
+- Run bridge locally (real PTY): `scripts/run-local.sh` (defaults HOST=127.0.0.1, PORT=8787, MOCK_PTY=false). Create a session with `scripts/create-session.sh` and connect via wscat to verify live IO.
 
 What tests cover
 - Config parsing defaults/overrides
