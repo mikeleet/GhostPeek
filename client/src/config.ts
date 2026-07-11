@@ -2,16 +2,27 @@ import { BridgeConfig, QrPayload } from './types'
 
 const STORAGE_KEY = 'ghostpeek_config'
 
+function loadEmbeddedConfig(): BridgeConfig | null {
+  const env = import.meta.env as Record<string, string | undefined>
+  const url = env.VITE_GHOSTPEEK_URL?.trim()
+  const token = env.VITE_GHOSTPEEK_TOKEN?.trim()
+  const label = env.VITE_GHOSTPEEK_LABEL?.trim() || 'GhostPeek'
+
+  if (!url || !token) return null
+  return { url, token, label }
+}
+
 export function loadConfig(): BridgeConfig | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
     const cfg = JSON.parse(raw) as BridgeConfig
     if (cfg.url && cfg.token) return cfg
-    return null
   } catch {
-    return null
+    // fall through to embedded config
   }
+
+  return loadEmbeddedConfig()
 }
 
 export function saveConfig(cfg: BridgeConfig): void {
