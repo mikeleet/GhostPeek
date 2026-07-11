@@ -61,11 +61,24 @@ function stripAnsi(text: string): string {
     .replace(/\r/g, '')
 }
 
+function pushGlassesText(chunk: string, replace = false) {
+  const clean = stripAnsi(chunk)
+  if (!clean) return
+
+  glassesTextBuffer = replace ? clean : `${glassesTextBuffer}${clean}`
+  glassesTextBuffer = glassesTextBuffer.slice(-1800)
+
+  if (isOnGlasses()) {
+    updateTerminal(glassesTextBuffer)
+  }
+}
+
 // ── State ──
 let bridge: BridgeClient | null = null
 let sessions: SessionInfo[] = []
 let activeSession: SessionInfo | null = null
 const gestures = new GestureMapper()
+let glassesTextBuffer = 'GhostPeek ready.\nWaiting for session...'
 
 // ── DOM elements ──
 const setupScreen = document.getElementById('setup-screen')!
@@ -244,11 +257,13 @@ function connectBridge(cfg: { url: string; token: string }) {
     }
     term.reset()
     term.writeln(`\x1b[2mGhostPeek \x1b[32m●\x1b[0m ${meta?.title || 'terminal'}\x1b[0m`)
+    glassesTextBuffer = `${meta?.title || 'terminal'}\n`
 
     bridge?.fetchScrollback(activeSession!.id).then((sb) => {
       for (const line of sb.lines) {
         term.writeln(line)
       }
+      pushGlassesText(sb.lines.join('\n'), true)
     }).catch(() => {})
 
     renderControls()
@@ -258,19 +273,13 @@ function connectBridge(cfg: { url: string; token: string }) {
   bridge.on('output', (data) => {
     if (!data) return
     term.write(data)
-    // stream stripped text to G2 glasses
-    if (isOnGlasses()) {
-      const clean = stripAnsi(data)
-      const lines = clean.split('\n').filter((l) => l)
-      if (lines.length > 0) {
-        updateTerminal(lines.slice(-20).join('\n'))
-      }
-    }
+    pushGlassesText(data)
   })
 
   bridge.on('exit', () => {
     updateStatus('session ended')
     term.writeln('\r\n\x1b[31m[session closed]\x1b[0m')
+    pushGlassesText('\n[session closed]')
   })
 
   bridge.on('close', () => {
@@ -279,6 +288,7 @@ function connectBridge(cfg: { url: string; token: string }) {
 
   bridge.on('error', (data) => {
     term.writeln(`\r\n\x1b[31m[error: ${data || 'unknown'}]\x1b[0m`)
+    pushGlassesText(`\n[error: ${data || 'unknown'}]`)
   })
 
   bridge.createSession('GhostPeek')
@@ -308,7 +318,7 @@ function connectBridge(cfg: { url: string; token: string }) {
         gestures.handleGesture(decodeG2Event(eventType))
       })
       renderStatusBar('GhostPeek | connected')
-      updateTerminal('GhostPeek ready.')
+      updateTerminal(glassesTextBuffer)
     }
   })
 }
@@ -332,6 +342,7 @@ function renderControls() {
   controlBar.innerHTML = `
     <button class="ctrl-btn ${gestures.isSliderMode() ? 'active' : ''}" id="slider-mode-btn">📏 slider</button>
     <button class="ctrl-btn" id="mode-btn">${gestures.getMode() === 'build' ? '🔨 build' : '📋 plan'}</button>
+    <button class="ctrl-btn" id="opencode-btn">▶ opencode</button>
     <button class="ctrl-btn" id="keyboard-btn">⌨️ input</button>
   `
 
@@ -345,6 +356,11 @@ function renderControls() {
   })
 
   document.getElementById('keyboard-btn')?.addEventListener('click', () => {
+    term.focus()
+  })
+
+  document.getElementById('opencode-btn')?.addEventListener('click', () => {
+    bridge?.sendInput('opencode\n')
     term.focus()
   })
 

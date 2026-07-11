@@ -18,6 +18,8 @@ export interface SessionInfo extends SessionMeta {
 
 export interface SessionCreateOptions {
   title?: string
+  workingDir: string
+  startupCommand?: string
   useTmux: boolean
   tmuxPrefix: string
   scrollbackLines: number
@@ -95,6 +97,13 @@ export class SessionManager extends EventEmitter {
     pty.onExit(({ exitCode }) => this.onExit(state, exitCode))
 
     this.sessions.set(id, state)
+
+    if (opts.startupCommand) {
+      queueMicrotask(() => {
+        pty.write(`${opts.startupCommand}\n`)
+      })
+    }
+
     return { ...state.meta, unreadCount: 0 }
   }
 
@@ -109,7 +118,7 @@ export class SessionManager extends EventEmitter {
         name: 'xterm-256color',
         cols: 120,
         rows: 32,
-        cwd: process.cwd(),
+        cwd: opts.workingDir,
         env: process.env,
       })
     }
@@ -118,7 +127,7 @@ export class SessionManager extends EventEmitter {
       name: 'xterm-256color',
       cols: 120,
       rows: 32,
-      cwd: process.cwd(),
+      cwd: opts.workingDir,
       env: process.env,
     })
   }

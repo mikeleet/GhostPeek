@@ -6,6 +6,8 @@ export interface BridgeConfig {
   token: string
   tokenFilePath: string
   tokenIsEnv: boolean
+  workingDir: string
+  startupCommand?: string
   useTmux: boolean
   tmuxSessionPrefix: string
   scrollbackLines: number

@@ -32,6 +32,8 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<Bridg
   const tokenFilePath = env.TOKEN_FILE || DEFAULT_TOKEN_FILE
   const token = await resolveToken({ envToken: env.TOKEN, tokenFilePath })
   const rotateTokenEnabled = env.ROTATE_TOKEN_ENABLED === 'true'
+  const workingDir = env.WORKDIR || process.cwd()
+  const startupCommand = env.STARTUP_COMMAND?.trim() || undefined
   const useTmux = env.USE_TMUX === 'true'
   const tmuxSessionPrefix = env.TMUX_SESSION_PREFIX || 'ghostpeek'
   const scrollbackLines = Number(env.SCROLLBACK_LINES || DEFAULT_SCROLLBACK)
@@ -45,6 +47,8 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<Bridg
     token,
     tokenFilePath,
     tokenIsEnv,
+    workingDir,
+    startupCommand,
     useTmux,
     tmuxSessionPrefix,
     scrollbackLines,

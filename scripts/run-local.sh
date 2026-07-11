@@ -11,6 +11,8 @@ MOCK_PTY=${MOCK_PTY:-false}
 ROTATE_TOKEN_ENABLED=${ROTATE_TOKEN_ENABLED:-false}
 TOKEN_FILE=${TOKEN_FILE:-$HOME/.ghostpeek/token}
 PAIRING_PIN_FILE=${PAIRING_PIN_FILE:-$HOME/.ghostpeek/pairing-pin}
+WORKDIR=${WORKDIR:-$ROOT_DIR}
+STARTUP_COMMAND=${STARTUP_COMMAND:-}
 
 if [ -z "${PAIRING_PIN:-}" ]; then
   mkdir -p "$(dirname "$PAIRING_PIN_FILE")"
@@ -23,6 +25,10 @@ if [ -z "${PAIRING_PIN:-}" ]; then
 fi
 
 echo "[ghostpeek] HOST=$HOST PORT=$PORT USE_TMUX=$USE_TMUX MOCK_PTY=$MOCK_PTY"
+echo "[ghostpeek] working dir: $WORKDIR"
+if [ -n "$STARTUP_COMMAND" ]; then
+  echo "[ghostpeek] startup command: $STARTUP_COMMAND"
+fi
 echo "[ghostpeek] token file: $TOKEN_FILE"
 echo "[ghostpeek] pairing pin: $PAIRING_PIN"
 
@@ -33,4 +39,4 @@ echo "[ghostpeek] building"
 npm run build
 
 echo "[ghostpeek] starting bridge"
-HOST="$HOST" PORT="$PORT" USE_TMUX="$USE_TMUX" MOCK_PTY="$MOCK_PTY" ROTATE_TOKEN_ENABLED="$ROTATE_TOKEN_ENABLED" TOKEN_FILE="$TOKEN_FILE" PAIRING_PIN="$PAIRING_PIN" npm run start
+HOST="$HOST" PORT="$PORT" USE_TMUX="$USE_TMUX" MOCK_PTY="$MOCK_PTY" ROTATE_TOKEN_ENABLED="$ROTATE_TOKEN_ENABLED" TOKEN_FILE="$TOKEN_FILE" PAIRING_PIN="$PAIRING_PIN" WORKDIR="$WORKDIR" STARTUP_COMMAND="$STARTUP_COMMAND" npm run start

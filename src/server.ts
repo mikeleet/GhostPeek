@@ -100,6 +100,8 @@ export function createApp(config: BridgeConfig, sessions: SessionManager, pairin
   app.post('/sessions', requireAuth, (req, res) => {
     const session = sessions.create({
       title: req.body?.title,
+      workingDir: config.workingDir,
+      startupCommand: config.startupCommand,
       useTmux: !!config.useTmux,
       tmuxPrefix: config.tmuxSessionPrefix,
       scrollbackLines: config.scrollbackLines,
