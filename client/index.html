@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GhostPeek</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="setup-screen" class="screen active">
+        <div class="setup-card">
+          <h1>GhostPeek</h1>
+          <p class="subtitle">Connect to your Mac bridge</p>
+          <div class="setup-actions">
+            <button id="scan-btn" class="btn primary">Scan QR</button>
+            <button id="manual-btn" class="btn secondary">Enter manually</button>
+          </div>
+          <div id="setup-status" class="status"></div>
+        </div>
+      </div>
+      <div id="terminal-screen" class="screen">
+        <div id="status-bar"></div>
+        <div id="terminal-view"></div>
+        <div id="control-bar"></div>
+      </div>
+      <div id="settings-screen" class="screen">
+        <div class="settings-card">
+          <h2>Settings</h2>
+          <label>Bridge URL</label>
+          <input id="bridge-url" type="url" placeholder="ws://host:8787" />
+          <label>Token</label>
+          <input id="bridge-token" type="password" placeholder="token" />
+          <div class="settings-actions">
+            <button id="save-btn" class="btn primary">Save & Connect</button>
+            <button id="settings-back-btn" class="btn secondary">Back</button>
+          </div>
+          <div id="settings-status" class="status"></div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

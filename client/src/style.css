@@ -1,0 +1,150 @@
+:root {
+  --bg: #0c1214;
+  --card: #0f181b;
+  --border: #1a2428;
+  --accent: #6cf289;
+  --text: #eaf2ee;
+  --text-dim: #9df2c3;
+  --text-muted: #9aa9b0;
+  --red: #f26c6c;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#app { width: 100%; max-width: 480px; padding: 16px; }
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+.setup-card, .settings-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px 20px;
+  text-align: center;
+}
+
+h1 { font-size: 24px; margin-bottom: 4px; }
+h2 { font-size: 20px; margin-bottom: 12px; }
+.subtitle { color: var(--text-muted); font-size: 14px; margin-bottom: 16px; }
+
+.btn {
+  padding: 12px 18px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 15px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.btn.primary { background: var(--accent); color: var(--bg); }
+.btn.primary:hover { filter: brightness(1.1); }
+.btn.secondary { background: var(--border); color: var(--text); border: 1px solid var(--border); }
+.btn.secondary:hover { background: #1a2428; }
+
+.setup-actions, .settings-actions { margin-top: 12px; }
+
+.status { margin-top: 8px; font-size: 13px; color: var(--text-muted); min-height: 18px; }
+.status.error { color: var(--red); }
+.status.good { color: var(--accent); }
+
+label {
+  display: block;
+  text-align: left;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+
+input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  outline: none;
+}
+
+input:focus { border-color: var(--accent); }
+
+#status-bar {
+  font-size: 13px;
+  color: var(--text-dim);
+  padding: 8px 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+#terminal-view {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  font-family: 'Fira Code', 'JetBrains Mono', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+  min-height: 320px;
+  max-height: 480px;
+  overflow-y: auto;
+  color: var(--text-dim);
+}
+
+#control-bar {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.ctrl-btn {
+  flex: 1;
+  min-width: 60px;
+  padding: 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+  text-align: center;
+}
+
+.ctrl-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+
+#input-row {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+#input-row input {
+  flex: 1;
+}
+
+.slider-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 6px;
+}
+
+.slider-row input[type=range] { flex: 1; }
