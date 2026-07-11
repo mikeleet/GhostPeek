@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+  <title>GhostPeek QR</title>
+  <meta charset="utf-8" />
+  <style>
+    :root { color-scheme: dark; }
+    body { margin:0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background:#0c1214; color:#eaf2ee; display:flex; align-items:center; justify-content:center; min-height:100vh; }
+    .card { text-align:center; padding:18px 20px; background:#0f181b; border:1px solid #1a2428; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,0.4); max-width:360px; width:90%; }
+    h1 { margin:0 0 10px; font-size:20px; letter-spacing:0.3px; }
+    .url { margin:12px 0 4px; font-size:12px; color:#9df2c3; word-break:break-all; }
+    .token { margin:0; font-size:12px; color:#6cf289; word-break:break-all; }
+    button { margin-top:12px; padding:10px 12px; border-radius:10px; border:1px solid #1a2428; background:#122026; color:#eaf2ee; cursor:pointer; font-weight:600; transition:all 0.15s ease; }
+    button:hover { background:#182c33; }
+    button:disabled { opacity:0.4; cursor:default; }
+    .status { margin-top:8px; font-size:12px; color:#9aa9b0; min-height:16px; }
+    img { width:240px; height:240px; border-radius:8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>GhostPeek Bridge</h1>
+    <img id="qr" alt="QR" />
+    <p class="url" id="url"></p>
+    <p class="token" id="token"></p>
+    <button id="rotate" disabled title="rotation disabled">Rotate token</button>
+    <div class="status" id="status"></div>
+  </div>
+  <script>
+    const qrImg = document.getElementById('qr');
+    const urlEl = document.getElementById('url');
+    const tokenEl = document.getElementById('token');
+    const rotateBtn = document.getElementById('rotate');
+    const statusEl = document.getElementById('status');
+
+    async function load() {
+      const res = await fetch('/bootstrap.json');
+      const data = await res.json();
+      qrImg.src = await fetchQr(data);
+      urlEl.textContent = data.url;
+      tokenEl.textContent = 'token: ' + data.token;
+      if (data.rotateEnabled) {
+        rotateBtn.disabled = false;
+        rotateBtn.title = '';
+        rotateBtn.addEventListener('click', async () => {
+          statusEl.textContent = 'Rotating...';
+          try {
+            const resp = await fetch('/rotate-token', { method: 'POST', headers: { Authorization: 'Bearer ' + data.token } });
+            if (!resp.ok) {
+              const body = await resp.json().catch(() => ({}));
+              statusEl.textContent = body.error || ('Failed: ' + resp.status);
+              return;
+            }
+            statusEl.textContent = 'Token rotated. Reload to refresh QR.';
+          } catch (err) {
+            statusEl.textContent = 'Error rotating token';
+          }
+        });
+      }
+    }
+
+    async function fetchQr(payload) {
+      const res = await fetch('/bootstrap.qr', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const text = await res.text();
+      return text;
+    }
+
+    load().catch(() => {
+      statusEl.textContent = 'Failed to load QR payload';
+    });
+  </script>
+</body>
+</html>
