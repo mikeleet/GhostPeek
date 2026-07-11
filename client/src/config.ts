@@ -22,12 +22,29 @@ export function clearConfig(): void {
   localStorage.removeItem(STORAGE_KEY)
 }
 
-export function parseQrPayload(raw: string): QrPayload | null {
+export async function resolveQrPayload(raw: string): Promise<QrPayload | null> {
+  const trimmed = raw.trim()
+
   try {
-    const obj = JSON.parse(raw)
+    const obj = JSON.parse(trimmed)
     if (obj.url && obj.token) return obj as QrPayload
-    return null
+  } catch {
+    // fall through to URL bootstrap flow
+  }
+
+  try {
+    const url = new URL(trimmed)
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return null
+    }
+
+    const res = await fetch(url.toString())
+    if (!res.ok) return null
+    const obj = (await res.json()) as QrPayload
+    if (obj.url && obj.token) return obj
   } catch {
     return null
   }
+
+  return null
 }

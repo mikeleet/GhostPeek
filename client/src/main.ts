@@ -3,7 +3,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { BridgeClient } from './bridge'
-import { loadConfig, saveConfig, parseQrPayload } from './config'
+import { loadConfig, saveConfig, resolveQrPayload } from './config'
 import { initGlasses, isOnGlasses, updateTerminal, renderStatusBar, onG2Event } from './glasses'
 import { GestureMapper, decodeG2Event } from './gestures'
 import type { QrPayload, SessionInfo } from './types'
@@ -107,7 +107,7 @@ document.getElementById('scan-btn')?.addEventListener('click', async () => {
       setupStatus.className = 'status error'
       return
     }
-    const payload = parseQrPayload(qrText)
+    const payload = await resolveQrPayload(qrText)
     if (!payload) {
       setupStatus.textContent = 'Invalid QR payload'
       setupStatus.className = 'status error'

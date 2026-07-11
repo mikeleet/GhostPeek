@@ -7,6 +7,11 @@ export interface QrPayload {
   rotateEnabled?: boolean
 }
 
+export function buildBootstrapUrl(config: BridgeConfig): string {
+  const proto = config.tls ? 'https' : 'http'
+  return `${proto}://${config.host}:${config.port}/bootstrap.json`
+}
+
 export function buildQrPayload(config: BridgeConfig): QrPayload {
   const proto = config.tls ? 'wss' : 'ws'
   const url = `${proto}://${config.host}:${config.port}`
