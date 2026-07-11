@@ -41,6 +41,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 export function createApp(config: BridgeConfig, sessions: SessionManager, pairingPin: string) {
   const app = express()
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Ghostpeek-Token')
+
+    if (req.method === 'OPTIONS') {
+      return res.status(204).end()
+    }
+
+    next()
+  })
   app.use(express.json())
   const publicDir = path.join(process.cwd(), 'public')
   app.use(express.static(publicDir))

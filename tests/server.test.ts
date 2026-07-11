@@ -32,4 +32,15 @@ describe('server auth', () => {
     expect(res.status).toBe(200)
     expect(res.body).toEqual([])
   })
+
+  it('returns cors headers and handles preflight', async () => {
+    const res = await request(baseUrl)
+      .options('/pair')
+      .set('origin', 'http://example.test')
+      .set('access-control-request-method', 'POST')
+
+    expect(res.status).toBe(204)
+    expect(res.headers['access-control-allow-origin']).toBe('*')
+    expect(res.headers['access-control-allow-methods']).toContain('POST')
+  })
 })
