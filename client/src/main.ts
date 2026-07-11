@@ -76,6 +76,8 @@ const terminalContainer = document.getElementById('terminal-container')!
 const statusBar = document.getElementById('status-bar')!
 const controlBar = document.getElementById('control-bar')!
 const settingsStatus = document.getElementById('settings-status')!
+const pairHostInput = document.getElementById('pair-host') as HTMLInputElement
+const pairPinInput = document.getElementById('pair-pin') as HTMLInputElement
 
 function showScreen(name: 'setup' | 'terminal' | 'settings') {
   setupScreen.classList.toggle('active', name === 'setup')
@@ -86,6 +88,33 @@ function showScreen(name: 'setup' | 'terminal' | 'settings') {
       try { fitAddon.fit() } catch {}
     })
   }
+}
+
+function normalizeWsUrl(input: string): string {
+  const trimmed = input.trim()
+  if (!trimmed) return ''
+  if (trimmed.startsWith('ws://') || trimmed.startsWith('wss://')) return trimmed
+  return `ws://${trimmed}`
+}
+
+function toHttpUrl(wsUrl: string): string {
+  return wsUrl.replace(/^ws:/, 'http:').replace(/^wss:/, 'https:')
+}
+
+async function pairWithPin(hostInput: string, pin: string): Promise<QrPayload> {
+  const wsUrl = normalizeWsUrl(hostInput)
+  const baseUrl = toHttpUrl(wsUrl)
+  const res = await fetch(`${baseUrl.replace(/\/$/, '')}/pair`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pin: pin.trim() }),
+  })
+
+  if (!res.ok) {
+    throw new Error(res.status === 401 ? 'Invalid PIN' : `Pair failed (${res.status})`)
+  }
+
+  return (await res.json()) as QrPayload
 }
 
 // ── Setup / QR flow ──
@@ -120,6 +149,18 @@ document.getElementById('scan-btn')?.addEventListener('click', async () => {
   }
 })
 
+document.getElementById('pair-btn')?.addEventListener('click', async () => {
+  setupStatus.textContent = 'Pairing...'
+  setupStatus.className = 'status'
+  try {
+    const payload = await pairWithPin(pairHostInput.value, pairPinInput.value)
+    applyQrPayload(payload)
+  } catch (err) {
+    setupStatus.textContent = err instanceof Error ? err.message : 'Pairing failed'
+    setupStatus.className = 'status error'
+  }
+})
+
 document.getElementById('manual-btn')?.addEventListener('click', () => {
   showScreen('settings')
   const cfg = loadConfig()
@@ -149,6 +190,7 @@ document.getElementById('settings-back-btn')?.addEventListener('click', () => {
 
 function applyQrPayload(payload: QrPayload) {
   saveConfig({ url: payload.url, token: payload.token, label: payload.label })
+  pairHostInput.value = payload.url.replace(/^wss?:\/\//, '')
   setupStatus.textContent = `Connected to ${payload.label}`
   setupStatus.className = 'status good'
   connectBridge({ url: payload.url, token: payload.token })
@@ -392,6 +434,9 @@ resizeObserver.observe(terminalContainer)
 // ── Boot ──
 function boot() {
   const cfg = loadConfig()
+  if (cfg) {
+    pairHostInput.value = cfg.url.replace(/^wss?:\/\//, '')
+  }
   if (cfg) {
     connectBridge(cfg)
   } else {

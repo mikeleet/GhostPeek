@@ -10,6 +10,10 @@ import { BridgeConfig } from './types.js'
 import { SessionManager } from './ptyManager.js'
 import { rotateTokenFile } from './token.js'
 
+function generatePairingPin(): string {
+  return String(Math.floor(1000 + Math.random() * 9000))
+}
+
 function tokenFromRequest(req: express.Request): string | null {
   const auth = req.headers.authorization
   if (auth && auth.toLowerCase().startsWith('bearer ')) {
@@ -35,7 +39,7 @@ function makeAuthMiddleware(token: string): express.RequestHandler {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-export function createApp(config: BridgeConfig, sessions: SessionManager) {
+export function createApp(config: BridgeConfig, sessions: SessionManager, pairingPin: string) {
   const app = express()
   app.use(express.json())
   const publicDir = path.join(process.cwd(), 'public')
@@ -53,6 +57,23 @@ export function createApp(config: BridgeConfig, sessions: SessionManager) {
 
   app.get('/bootstrap.json', (_req, res) => {
     res.json(buildQrPayload(config))
+  })
+
+  app.get('/pairing-info', (_req, res) => {
+    res.json({
+      host: config.host,
+      port: config.port,
+      pin: pairingPin,
+      wsUrl: `${config.tls ? 'wss' : 'ws'}://${config.host}:${config.port}`,
+    })
+  })
+
+  app.post('/pair', (req, res) => {
+    const pin = String(req.body?.pin ?? '').trim()
+    if (pin !== pairingPin) {
+      return res.status(401).json({ error: 'invalid pin' })
+    }
+    return res.json(buildQrPayload(config))
   })
 
   app.post('/bootstrap.qr', async (req, res) => {
@@ -146,8 +167,9 @@ export function createApp(config: BridgeConfig, sessions: SessionManager) {
 
 export async function createServer() {
   const config = await loadConfig()
+  const pairingPin = process.env.PAIRING_PIN?.trim() || generatePairingPin()
   const sessions = new SessionManager(config.scrollbackLines, config.mockPty)
-  const app = createApp(config, sessions)
+  const app = createApp(config, sessions, pairingPin)
   const server = http.createServer(app)
   const wss = new WebSocketServer({ server, path: '/term' })
 
@@ -227,14 +249,16 @@ export async function createServer() {
     }
   })
 
-  return { config, app, server, wss, sessions }
+  return { config, app, server, wss, sessions, pairingPin }
 }
 
 async function main() {
-  const { server, config } = await createServer()
+  const { server, config, pairingPin } = await createServer()
   server.listen(config.port, config.host, () => {
     // eslint-disable-next-line no-console
     console.log(`GhostPeek bridge listening on ${config.host}:${config.port}`)
+    // eslint-disable-next-line no-console
+    console.log(`GhostPeek pairing PIN: ${pairingPin}`)
   })
 }
 

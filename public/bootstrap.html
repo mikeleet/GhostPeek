@@ -10,6 +10,7 @@
     h1 { margin:0 0 10px; font-size:20px; letter-spacing:0.3px; }
     .url { margin:12px 0 4px; font-size:12px; color:#9df2c3; word-break:break-all; }
     .token { margin:0; font-size:12px; color:#6cf289; word-break:break-all; }
+    .pin { margin:10px 0 0; font-size:28px; font-weight:700; letter-spacing:4px; color:#6cf289; }
     button { margin-top:12px; padding:10px 12px; border-radius:10px; border:1px solid #1a2428; background:#122026; color:#eaf2ee; cursor:pointer; font-weight:600; transition:all 0.15s ease; }
     button:hover { background:#182c33; }
     button:disabled { opacity:0.4; cursor:default; }
@@ -20,9 +21,10 @@
 <body>
   <div class="card">
     <h1>GhostPeek Bridge</h1>
-    <p class="status">Scan this from inside the GhostPeek app.</p>
+    <p class="status">Open GhostPeek, enter host + PIN, or scan this from inside the app.</p>
     <img id="qr" alt="QR" />
     <p class="url" id="url"></p>
+    <p class="pin" id="pin"></p>
     <p class="token" id="token"></p>
     <button id="rotate" disabled title="rotation disabled">Rotate token</button>
     <div class="status" id="status"></div>
@@ -31,14 +33,17 @@
     const qrImg = document.getElementById('qr');
     const urlEl = document.getElementById('url');
     const tokenEl = document.getElementById('token');
+    const pinEl = document.getElementById('pin');
     const rotateBtn = document.getElementById('rotate');
     const statusEl = document.getElementById('status');
 
     async function load() {
-      const res = await fetch('/bootstrap.json');
+      const [res, pairRes] = await Promise.all([fetch('/bootstrap.json'), fetch('/pairing-info')]);
       const data = await res.json();
+      const pair = await pairRes.json();
       qrImg.src = await fetchQr(data);
       urlEl.textContent = data.url;
+      pinEl.textContent = pair.pin;
       tokenEl.textContent = 'token: ' + data.token;
       if (data.rotateEnabled) {
         rotateBtn.disabled = false;

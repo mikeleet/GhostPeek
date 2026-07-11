@@ -12,7 +12,12 @@
         <div class="setup-card">
           <h1>GhostPeek</h1>
           <p class="subtitle">Connect to your Mac bridge</p>
+          <label>Host</label>
+          <input id="pair-host" type="text" placeholder="192.168.0.32:8787" />
+          <label>PIN</label>
+          <input id="pair-pin" type="text" inputmode="numeric" maxlength="4" placeholder="1234" />
           <div class="setup-actions">
+            <button id="pair-btn" class="btn primary">Pair & Connect</button>
             <button id="scan-btn" class="btn primary">Scan QR</button>
             <button id="manual-btn" class="btn secondary">Enter manually</button>
           </div>
