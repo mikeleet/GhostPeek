@@ -5,7 +5,7 @@ import QRCode from 'qrcode'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { loadConfig } from './config.js'
-import { buildBootstrapUrl, buildQrPayload } from './bootstrap.js'
+import { buildBootstrapQrText, buildQrPayload } from './bootstrap.js'
 import { BridgeConfig } from './types.js'
 import { SessionManager } from './ptyManager.js'
 import { rotateTokenFile } from './token.js'
@@ -56,8 +56,8 @@ export function createApp(config: BridgeConfig, sessions: SessionManager) {
   })
 
   app.post('/bootstrap.qr', async (req, res) => {
-    const bootstrapUrl = buildBootstrapUrl(config)
-    const dataUrl = await QRCode.toDataURL(bootstrapUrl)
+    const qrText = buildBootstrapQrText(config)
+    const dataUrl = await QRCode.toDataURL(qrText)
     res.type('text/plain').send(dataUrl)
   })
 

@@ -25,6 +25,18 @@ export function clearConfig(): void {
 export async function resolveQrPayload(raw: string): Promise<QrPayload | null> {
   const trimmed = raw.trim()
 
+  if (trimmed.startsWith('GHOSTPEEK_BOOTSTRAP:')) {
+    const bootstrapUrl = trimmed.slice('GHOSTPEEK_BOOTSTRAP:'.length).trim()
+    try {
+      const res = await fetch(bootstrapUrl)
+      if (!res.ok) return null
+      const obj = (await res.json()) as QrPayload
+      if (obj.url && obj.token) return obj
+    } catch {
+      return null
+    }
+  }
+
   try {
     const obj = JSON.parse(trimmed)
     if (obj.url && obj.token) return obj as QrPayload

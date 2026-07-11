@@ -12,6 +12,10 @@ export function buildBootstrapUrl(config: BridgeConfig): string {
   return `${proto}://${config.host}:${config.port}/bootstrap.json`
 }
 
+export function buildBootstrapQrText(config: BridgeConfig): string {
+  return `GHOSTPEEK_BOOTSTRAP:${buildBootstrapUrl(config)}`
+}
+
 export function buildQrPayload(config: BridgeConfig): QrPayload {
   const proto = config.tls ? 'wss' : 'ws'
   const url = `${proto}://${config.host}:${config.port}`
