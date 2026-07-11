@@ -1,9 +1,17 @@
 import './style.css'
+import Convert from 'ansi-to-html'
 import { BridgeClient } from './bridge'
 import { loadConfig, saveConfig, clearConfig, parseQrPayload } from './config'
 import { initGlasses, isOnGlasses, renderTerminal, updateTerminal, renderStatusBar, onG2Event } from './glasses'
 import { GestureMapper, decodeG2Event } from './gestures'
 import type { QrPayload, SessionInfo } from './types'
+
+const ansiConvert = new Convert({ fg: '#9df2c3', bg: '#0f181b', newline: true })
+
+function stripAnsi(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\x1b\][^\x07]*\x07/g, '')
+}
 
 // ── State ──
 let bridge: BridgeClient | null = null
@@ -210,11 +218,12 @@ function connectBridge(cfg: { url: string; token: string }) {
 // ── Output rendering ──
 function renderOutput() {
   const slice = outputBuffer.slice(scrollOffset, scrollOffset + VIEWPORT_LINES)
-  terminalView.textContent = slice.join('\n') || '...'
+  const raw = slice.join('\n') || '...'
+  terminalView.innerHTML = ansiConvert.toHtml(raw)
 
-  // also push to glasses if active
+  // also push to glasses if active (strip ANSI for monochrome G2 display)
   if (isOnGlasses()) {
-    updateTerminal(slice.join('\n'))
+    updateTerminal(stripAnsi(raw))
   }
 }
 
