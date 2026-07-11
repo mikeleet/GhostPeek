@@ -1,6 +1,6 @@
 import { EventEmitter } from 'events'
 import crypto from 'crypto'
-import { spawn, IPty } from 'node-pty'
+import { spawn, IPty, IDisposable } from 'node-pty'
 
 import type { Mode } from './types.js'
 
@@ -203,8 +203,9 @@ class MockPty extends EventEmitter implements IPty {
   rows = 32
   readable = true
   writable = true
+  handleFlowControl = false
 
-  write(data: string) {
+  write(data: string | Buffer) {
     // Echo back data to simulate output
     queueMicrotask(() => this.emit('data', data))
   }
@@ -215,11 +216,16 @@ class MockPty extends EventEmitter implements IPty {
   kill() {
     queueMicrotask(() => this.emit('exit', { exitCode: 0, signal: undefined }))
   }
-  onData(listener: (data: string) => void) {
+  clear() {}
+  pause() {}
+  resume() {}
+  onData: (listener: (data: string) => void) => IDisposable = (listener) => {
     this.on('data', listener)
+    return { dispose: () => this.off('data', listener) }
   }
-  onExit(listener: (evt: { exitCode: number; signal?: number }) => void) {
+  onExit: (listener: (evt: { exitCode: number; signal?: number }) => void) => IDisposable = (listener) => {
     this.on('exit', listener)
+    return { dispose: () => this.off('exit', listener) }
   }
 }
 
