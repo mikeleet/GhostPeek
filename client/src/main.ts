@@ -3,7 +3,7 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
 import { BridgeClient } from './bridge'
-import { loadConfig, saveConfig, resolveQrPayload } from './config'
+import { getPairingDefaults, loadConfig, saveConfig, resolveQrPayload } from './config'
 import { initGlasses, isOnGlasses, updateTerminal, renderStatusBar, onG2Event } from './glasses'
 import { GestureMapper, decodeG2Event } from './gestures'
 import type { QrPayload, SessionInfo } from './types'
@@ -78,6 +78,7 @@ const controlBar = document.getElementById('control-bar')!
 const settingsStatus = document.getElementById('settings-status')!
 const pairHostInput = document.getElementById('pair-host') as HTMLInputElement
 const pairPinInput = document.getElementById('pair-pin') as HTMLInputElement
+const pairingDefaults = getPairingDefaults()
 
 function showScreen(name: 'setup' | 'terminal' | 'settings') {
   setupScreen.classList.toggle('active', name === 'setup')
@@ -434,6 +435,12 @@ resizeObserver.observe(terminalContainer)
 // ── Boot ──
 function boot() {
   const cfg = loadConfig()
+  if (pairingDefaults.host) {
+    pairHostInput.value = pairingDefaults.host
+  }
+  if (pairingDefaults.pin) {
+    pairPinInput.value = pairingDefaults.pin
+  }
   if (cfg) {
     pairHostInput.value = cfg.url.replace(/^wss?:\/\//, '')
   }

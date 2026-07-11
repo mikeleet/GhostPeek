@@ -13,6 +13,11 @@ export interface BridgeConfig {
   label?: string
 }
 
+export interface PairingDefaults {
+  host?: string
+  pin?: string
+}
+
 export interface SessionInfo {
   id: string
   title: string

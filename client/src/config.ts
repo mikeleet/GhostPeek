@@ -1,4 +1,4 @@
-import { BridgeConfig, QrPayload } from './types'
+import { BridgeConfig, PairingDefaults, QrPayload } from './types'
 
 const STORAGE_KEY = 'ghostpeek_config'
 
@@ -10,6 +10,19 @@ function loadEmbeddedConfig(): BridgeConfig | null {
 
   if (!url || !token) return null
   return { url, token, label }
+}
+
+export function getPairingDefaults(): PairingDefaults {
+  const env = import.meta.env as Record<string, string | undefined>
+  const embedded = loadEmbeddedConfig()
+  const host = env.VITE_GHOSTPEEK_PAIR_HOST?.trim()
+    || embedded?.url?.replace(/^wss?:\/\//, '')
+  const pin = env.VITE_GHOSTPEEK_PAIR_PIN?.trim()
+
+  return {
+    host: host || undefined,
+    pin: pin || undefined,
+  }
 }
 
 export function loadConfig(): BridgeConfig | null {
