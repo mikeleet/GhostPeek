@@ -1,7 +1,7 @@
-GhostPeek — Ghostty → Even G2 bridge (WIP)
+GhostPeek — Persistent terminal & opencode streaming for Even G2 glasses
 
 Purpose
-- Stream multi-session Ghostty/pty output to Even G2 and phone companion.
+- Stream persistent PTY/tmux sessions (shell, opencode, any CLI) to Even G2 and phone companion.
 - QR-based bootstrap: bridge shows QR with `{url, token, label}`; phone scans once, stores config.
 - Supports tmux attach for persistent shells; optional slider/mode controls for build/plan workflows.
 

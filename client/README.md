@@ -1,6 +1,6 @@
 # GhostPeek Client
 
-Even G2 app + phone companion for GhostPeek bridge.
+Persistent terminal & opencode streaming to Even G2 glasses.
 
 ## Dev
 
