@@ -1,26 +1,70 @@
 import './style.css'
-import Convert from 'ansi-to-html'
+import { Terminal } from '@xterm/xterm'
+import { FitAddon } from '@xterm/addon-fit'
+import { WebglAddon } from '@xterm/addon-webgl'
 import { BridgeClient } from './bridge'
-import { loadConfig, saveConfig, clearConfig, parseQrPayload } from './config'
-import { initGlasses, isOnGlasses, renderTerminal, updateTerminal, renderStatusBar, onG2Event } from './glasses'
+import { loadConfig, saveConfig, parseQrPayload } from './config'
+import { initGlasses, isOnGlasses, updateTerminal, renderStatusBar, onG2Event } from './glasses'
 import { GestureMapper, decodeG2Event } from './gestures'
 import type { QrPayload, SessionInfo } from './types'
 
-const ansiConvert = new Convert({ fg: '#9df2c3', bg: '#0f181b', newline: true })
+// ── Terminal setup ──
+const term = new Terminal({
+  cursorBlink: true,
+  cursorStyle: 'bar',
+  fontSize: 14,
+  fontFamily: "'Fira Code', 'JetBrains Mono', 'Menlo', monospace",
+  theme: {
+    background: '#0c1214',
+    foreground: '#9df2c3',
+    cursor: '#6cf289',
+    selectionBackground: '#1a3a2a',
+    black: '#1a2428',
+    red: '#f26c6c',
+    green: '#6cf289',
+    yellow: '#f2c86c',
+    blue: '#6cc2f2',
+    magenta: '#c26cf2',
+    cyan: '#6cf2c2',
+    white: '#eaf2ee',
+    brightBlack: '#3a4a50',
+    brightRed: '#ff8c8c',
+    brightGreen: '#9df2c3',
+    brightYellow: '#ffe88c',
+    brightBlue: '#8cd8ff',
+    brightMagenta: '#e09dff',
+    brightCyan: '#8cffe8',
+    brightWhite: '#ffffff',
+  },
+  allowProposedApi: true,
+  allowTransparency: false,
+  cols: 80,
+  rows: 24,
+})
 
+const fitAddon = new FitAddon()
+term.loadAddon(fitAddon)
+
+try {
+  const webglAddon = new WebglAddon()
+  term.loadAddon(webglAddon)
+} catch {
+  // WebGL not available, canvas fallback works fine
+}
+
+// ── ANSI stripping for G2 ──
 function stripAnsi(text: string): string {
   // eslint-disable-next-line no-control-regex
-  return text.replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '').replace(/\x1b\][^\x07]*\x07/g, '')
+  return text
+    .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
+    .replace(/\x1b\][^\x07]*\x07/g, '')
+    .replace(/\r/g, '')
 }
 
 // ── State ──
 let bridge: BridgeClient | null = null
 let sessions: SessionInfo[] = []
 let activeSession: SessionInfo | null = null
-let scrollOffset = 0
-const SCROLL_STEP = 10
-const VIEWPORT_LINES = 24
-let outputBuffer: string[] = []
 const gestures = new GestureMapper()
 
 // ── DOM elements ──
@@ -28,7 +72,7 @@ const setupScreen = document.getElementById('setup-screen')!
 const terminalScreen = document.getElementById('terminal-screen')!
 const settingsScreen = document.getElementById('settings-screen')!
 const setupStatus = document.getElementById('setup-status')!
-const terminalView = document.getElementById('terminal-view')!
+const terminalContainer = document.getElementById('terminal-container')!
 const statusBar = document.getElementById('status-bar')!
 const controlBar = document.getElementById('control-bar')!
 const settingsStatus = document.getElementById('settings-status')!
@@ -37,6 +81,11 @@ function showScreen(name: 'setup' | 'terminal' | 'settings') {
   setupScreen.classList.toggle('active', name === 'setup')
   terminalScreen.classList.toggle('active', name === 'terminal')
   settingsScreen.classList.toggle('active', name === 'settings')
+  if (name === 'terminal') {
+    requestAnimationFrame(() => {
+      try { fitAddon.fit() } catch {}
+    })
+  }
 }
 
 // ── Setup / QR flow ──
@@ -44,19 +93,17 @@ document.getElementById('scan-btn')?.addEventListener('click', async () => {
   setupStatus.textContent = 'Opening camera...'
   setupStatus.className = 'status'
   try {
-    // Even SDK: captureImageFromCamera
     const mod = await import('@evenrealities/even_hub_sdk')
-    const bridge = await mod.waitForEvenAppBridge()
-    const image = await bridge.captureImageFromCamera()
+    const evenBridge = await mod.waitForEvenAppBridge()
+    const image = await evenBridge.captureImageFromCamera()
     if (!image?.base64) {
       setupStatus.textContent = 'No image captured'
       setupStatus.className = 'status error'
       return
     }
-    // Decode QR from image
     const qrText = await decodeQRFromImage(image.base64)
     if (!qrText) {
-      setupStatus.textContent = 'No QR code found in image'
+      setupStatus.textContent = 'No QR code found'
       setupStatus.className = 'status error'
       return
     }
@@ -67,7 +114,7 @@ document.getElementById('scan-btn')?.addEventListener('click', async () => {
       return
     }
     applyQrPayload(payload)
-  } catch (err) {
+  } catch {
     setupStatus.textContent = 'Camera not available. Use manual entry.'
     setupStatus.className = 'status error'
   }
@@ -97,12 +144,7 @@ document.getElementById('save-btn')?.addEventListener('click', () => {
 })
 
 document.getElementById('settings-back-btn')?.addEventListener('click', () => {
-  const cfg = loadConfig()
-  if (cfg) {
-    showScreen('terminal')
-  } else {
-    showScreen('setup')
-  }
+  showScreen(loadConfig() ? 'terminal' : 'setup')
 })
 
 function applyQrPayload(payload: QrPayload) {
@@ -112,7 +154,6 @@ function applyQrPayload(payload: QrPayload) {
   connectBridge({ url: payload.url, token: payload.token })
 }
 
-// ── QR decoding (using JSQR if available, else fallback) ──
 async function decodeQRFromImage(base64: string): Promise<string | null> {
   try {
     const { default: jsQR } = await import('jsqr')
@@ -127,7 +168,6 @@ async function decodeQRFromImage(base64: string): Promise<string | null> {
     const code = jsQR(imageData.data, img.width, img.height)
     return code?.data ?? null
   } catch {
-    // fallback: ask user to enter payload manually
     return prompt('QR could not be decoded. Paste the QR content:')
   }
 }
@@ -144,6 +184,10 @@ function loadImage(base64: string): Promise<HTMLImageElement> {
 // ── Bridge connection ──
 function connectBridge(cfg: { url: string; token: string }) {
   bridge?.disconnect()
+
+  term.reset()
+  term.writeln('GhostPeek \x1b[32m●\x1b[0m connecting...')
+
   bridge = new BridgeClient(cfg)
 
   bridge.on('open', () => {
@@ -153,94 +197,99 @@ function connectBridge(cfg: { url: string; token: string }) {
   bridge.on('hello', (_data, meta) => {
     if (meta) {
       activeSession = meta
-      updateStatus(`${meta.title} | ${meta.mode}`)
+      updateStatus(meta.title || 'terminal')
     }
-    // fetch scrollback
+    term.reset()
+    term.writeln(`\x1b[2mGhostPeek \x1b[32m●\x1b[0m ${meta?.title || 'terminal'}\x1b[0m`)
+
     bridge?.fetchScrollback(activeSession!.id).then((sb) => {
-      outputBuffer = sb.lines
-      scrollOffset = Math.max(0, outputBuffer.length - VIEWPORT_LINES)
-      renderOutput()
+      for (const line of sb.lines) {
+        term.writeln(line)
+      }
     }).catch(() => {})
+
+    renderControls()
+    showScreen('terminal')
   })
 
   bridge.on('output', (data) => {
     if (!data) return
-    const lines = data.split(/\r?\n/)
-    for (const line of lines) {
-      if (line) outputBuffer.push(line)
+    term.write(data)
+    // stream stripped text to G2 glasses
+    if (isOnGlasses()) {
+      const clean = stripAnsi(data)
+      const lines = clean.split('\n').filter((l) => l)
+      if (lines.length > 0) {
+        updateTerminal(lines.slice(-20).join('\n'))
+      }
     }
-    // auto-scroll to bottom
-    scrollOffset = Math.max(0, outputBuffer.length - VIEWPORT_LINES)
-    renderOutput()
   })
 
   bridge.on('exit', () => {
     updateStatus('session ended')
-    outputBuffer.push('[session closed]')
-    renderOutput()
+    term.writeln('\r\n\x1b[31m[session closed]\x1b[0m')
   })
 
   bridge.on('close', () => {
-    updateStatus('disconnected')
+    updateStatus('disconnected — reconnecting...')
   })
 
   bridge.on('error', (data) => {
-    updateStatus(`error: ${data || 'unknown'}`)
+    term.writeln(`\r\n\x1b[31m[error: ${data || 'unknown'}]\x1b[0m`)
   })
 
-  // Create session and connect
   bridge.createSession('GhostPeek')
     .then((s) => {
       sessions = [s]
       activeSession = s
       bridge!.connect(s.id)
-      renderControls()
-      showScreen('terminal')
     })
     .catch((err) => {
-      setupStatus.textContent = `Failed: ${err.message}`
-      setupStatus.className = 'status error'
+      term.writeln(`\r\n\x1b[31mFailed to connect: ${err.message}\x1b[0m`)
     })
 
-  // Initialize glasses if available
+  // ── Terminal input → bridge ──
+  term.onData((data) => {
+    bridge?.sendInput(data)
+  })
+
+  // ── Terminal resize → bridge ──
+  term.onResize(({ cols, rows }) => {
+    bridge?.resize(cols, rows)
+  })
+
+  // ── Initialize glasses if available ──
   initGlasses().then((ok) => {
     if (ok) {
-      onG2Event((eventType, _containerID) => {
-        const gesture = decodeG2Event(eventType)
-        gestures.handleGesture(gesture)
+      onG2Event((eventType) => {
+        gestures.handleGesture(decodeG2Event(eventType))
       })
-      renderTerminal('GhostPeek ready.\n')
       renderStatusBar('GhostPeek | connected')
+      updateTerminal('GhostPeek ready.')
     }
   })
 }
 
-// ── Output rendering ──
-function renderOutput() {
-  const slice = outputBuffer.slice(scrollOffset, scrollOffset + VIEWPORT_LINES)
-  const raw = slice.join('\n') || '...'
-  terminalView.innerHTML = ansiConvert.toHtml(raw)
-
-  // also push to glasses if active (strip ANSI for monochrome G2 display)
-  if (isOnGlasses()) {
-    updateTerminal(stripAnsi(raw))
-  }
-}
-
+// ── Status bar ──
 function updateStatus(msg: string) {
-  statusBar.textContent = msg
+  const mode = gestures.getMode()
+  const slider = gestures.getSliderValue()
+  statusBar.innerHTML = `
+    <span>${msg}</span>
+    <span class="mode-badge ${mode}">${mode}</span>
+    <span style="font-size:11px;color:var(--text-muted)">slider:${slider}</span>
+  `
   if (isOnGlasses()) {
-    renderStatusBar(msg)
+    renderStatusBar(`${msg} ${mode}`)
   }
 }
 
 // ── Controls ──
 function renderControls() {
   controlBar.innerHTML = `
-    <button class="ctrl-btn" id="mode-btn">${gestures.getMode()}</button>
-    <button class="ctrl-btn" id="tab-prev">◀ tab</button>
-    <button class="ctrl-btn" id="tab-next">tab ▶</button>
-    <button class="ctrl-btn ${gestures.isSliderMode() ? 'active' : ''}" id="slider-mode-btn">slider:${gestures.getSliderValue()}</button>
+    <button class="ctrl-btn ${gestures.isSliderMode() ? 'active' : ''}" id="slider-mode-btn">📏 slider</button>
+    <button class="ctrl-btn" id="mode-btn">${gestures.getMode() === 'build' ? '🔨 build' : '📋 plan'}</button>
+    <button class="ctrl-btn" id="keyboard-btn">⌨️ input</button>
   `
 
   document.getElementById('mode-btn')?.addEventListener('click', () => {
@@ -252,17 +301,11 @@ function renderControls() {
     renderControls()
   })
 
-  document.getElementById('tab-prev')?.addEventListener('click', () => {
-    document.getElementById('tab-prev')?.classList.add('active')
-    setTimeout(() => document.getElementById('tab-prev')?.classList.remove('active'), 150)
+  document.getElementById('keyboard-btn')?.addEventListener('click', () => {
+    term.focus()
   })
 
-  document.getElementById('tab-next')?.addEventListener('click', () => {
-    document.getElementById('tab-next')?.classList.add('active')
-    setTimeout(() => document.getElementById('tab-next')?.classList.remove('active'), 150)
-  })
-
-  // Input row
+  // Keyboard input row
   const inputRow = document.createElement('div')
   inputRow.id = 'input-row'
   const input = document.createElement('input')
@@ -270,18 +313,12 @@ function renderControls() {
   input.placeholder = 'Type command...'
   const sendBtn = document.createElement('button')
   sendBtn.className = 'btn primary'
-  sendBtn.style.width = 'auto'
-  sendBtn.style.marginBottom = '0'
+  sendBtn.style.cssText = 'width:auto;margin-bottom:0;'
   sendBtn.textContent = 'Send'
 
   const send = () => {
-    const val = input.value + '\n'
-    if (val.trim()) {
-      bridge?.sendInput(val)
-      outputBuffer.push(`> ${val.trim()}`)
-      scrollOffset = Math.max(0, outputBuffer.length - VIEWPORT_LINES)
-      renderOutput()
-    }
+    if (!input.value) return
+    bridge?.sendInput(input.value + '\n')
     input.value = ''
   }
 
@@ -306,13 +343,8 @@ function renderControls() {
   range.addEventListener('input', () => {
     const val = Number(range.value)
     sliderLabel.textContent = String(val)
-    // update local gesture state
-    for (let i = 0; i < Math.abs(val - gestures.getSliderValue()); i++) {
-      if (val > gestures.getSliderValue()) {
-        gestures.handleGesture('swipe_up')
-      } else {
-        gestures.handleGesture('swipe_down')
-      }
+    while (gestures.getSliderValue() !== val) {
+      gestures.handleGesture(val > gestures.getSliderValue() ? 'swipe_up' : 'swipe_down')
     }
     renderControls()
   })
@@ -332,26 +364,30 @@ gestures.onChange((action, payload) => {
       break
     case 'mode_toggle':
       bridge.setMode(activeSession.id, payload as 'build' | 'plan')
-      updateStatus(`${activeSession.title} | ${payload}`)
+      updateStatus(`tab:${activeSession.title} | ${payload}`)
       renderControls()
       break
     case 'scroll_up':
-      scrollOffset = Math.max(0, scrollOffset - SCROLL_STEP)
-      renderOutput()
+      term.scrollLines(-3)
       break
     case 'scroll_down':
-      scrollOffset = Math.min(outputBuffer.length - VIEWPORT_LINES, scrollOffset + SCROLL_STEP)
-      renderOutput()
+      term.scrollLines(3)
       break
     case 'slider_change':
       bridge.setSlider(activeSession.id, payload as number)
-      updateStatus(`${activeSession.title} | ${gestures.getMode()} | slider:${payload}`)
+      updateStatus(`${activeSession.title} | ${gestures.getMode()}`)
       renderControls()
-      break
-    default:
       break
   }
 })
+
+// ── Mount terminal ──
+term.open(terminalContainer)
+
+const resizeObserver = new ResizeObserver(() => {
+  try { fitAddon.fit() } catch {}
+})
+resizeObserver.observe(terminalContainer)
 
 // ── Boot ──
 function boot() {

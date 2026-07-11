@@ -1,3 +1,5 @@
+@import '@xterm/xterm/css/xterm.css';
+
 :root {
   --bg: #0c1214;
   --card: #0f181b;
@@ -15,16 +17,17 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
   background: var(--bg);
   color: var(--text);
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
-#app { width: 100%; max-width: 480px; padding: 16px; }
+#app { width: 100%; height: 100%; display: flex; flex-direction: column; }
 
-.screen { display: none; }
-.screen.active { display: block; }
+.screen { display: none; flex-direction: column; height: 100%; }
+.screen.active { display: flex; }
+.screen.fullscreen { display: none; flex-direction: column; height: 100%; }
+.screen.fullscreen.active { display: flex; }
 
 .setup-card, .settings-card {
   background: var(--card);
@@ -32,6 +35,9 @@ body {
   border-radius: 16px;
   padding: 24px 20px;
   text-align: center;
+  margin: auto;
+  max-width: 360px;
+  width: 90%;
 }
 
 h1 { font-size: 24px; margin-bottom: 4px; }
@@ -84,67 +90,123 @@ input {
 input:focus { border-color: var(--accent); }
 
 #status-bar {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-dim);
-  padding: 8px 4px;
+  padding: 6px 10px;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 8px;
+  flex-shrink: 0;
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-#terminal-view {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px;
-  font-family: 'Fira Code', 'JetBrains Mono', monospace;
-  font-size: 13px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-all;
-  min-height: 320px;
-  max-height: 480px;
-  overflow-y: auto;
-  color: var(--text-dim);
+#status-bar .mode-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--border);
+}
+
+#status-bar .mode-badge.build { background: var(--accent); color: var(--bg); }
+
+#terminal-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 4px;
+}
+
+#terminal-container .xterm {
+  height: 100%;
+  padding: 6px;
+}
+
+#terminal-container .xterm-viewport {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
 #control-bar {
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 6px;
+  padding: 8px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
   flex-wrap: wrap;
+  background: var(--bg);
 }
 
 .ctrl-btn {
   flex: 1;
-  min-width: 60px;
-  padding: 8px;
+  min-width: 50px;
+  padding: 8px 6px;
   border-radius: 10px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--text);
   cursor: pointer;
   text-align: center;
+  transition: all 0.15s ease;
 }
 
 .ctrl-btn.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+.ctrl-btn:active { transform: scale(0.96); }
 
 #input-row {
   display: flex;
   gap: 6px;
-  margin-top: 8px;
+  width: 100%;
+  margin-top: 4px;
 }
 
 #input-row input {
   flex: 1;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
 }
+
+#input-row input:focus { border-color: var(--accent); }
 
 .slider-row {
   display: flex;
   gap: 8px;
   align-items: center;
-  margin-top: 6px;
+  width: 100%;
+  margin-top: 4px;
 }
 
-.slider-row input[type=range] { flex: 1; }
+.slider-row input[type=range] {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  outline: none;
+}
+
+.slider-row input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.slider-row span {
+  font-size: 12px;
+  color: var(--text-dim);
+  min-width: 24px;
+  text-align: center;
+}
