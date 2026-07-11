@@ -10,7 +10,12 @@
     {
       "name": "network",
       "desc": "Connect to GhostPeek bridge",
-      "whitelist": ["ws://127.0.0.1:8787", "http://127.0.0.1:8787", "ws://localhost:8787", "http://localhost:8787"]
+      "whitelist": [
+        "ws://127.0.0.1:8787", "http://127.0.0.1:8787",
+        "ws://localhost:8787", "http://localhost:8787",
+        "ws://192.168.0.32:8787", "http://192.168.0.32:8787",
+        "http://192.168.0.32:5173"
+      ]
     },
     {
       "name": "camera",
